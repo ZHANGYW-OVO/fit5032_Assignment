@@ -13,8 +13,24 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.10",
+    "@fullcalendar/daygrid": "^6.1.10",
+    "@fullcalendar/interaction": "^6.1.10",
+    "@fullcalendar/vue3": "^6.1.10",
+    "@vueuse/core": "^11.3.0",
+    "chart.js": "^4.5.0",
+    "datatables.net": "^2.0.0",
+    "datatables.net-dt": "^2.0.0",
+    "datatables.net-vue3": "^3.0.0",
+    "firebase": "^11.10.0",
+    "fullcalendar": "^6.1.10",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "leaflet": "^1.9.4",
+    "papaparse": "^5.5.3",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
+    "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {

@@ -1,9 +1,12 @@
-// 认证状态管理 - 内存版本 (适用于 Claude.ai artifacts)
+// 认证状态管理 - 修复版本
 export class AuthStore {
   constructor() {
     this.currentUser = null
     this.users = this.getDefaultUsers()
     this.lastActivity = Date.now()
+    // 🔥 新增：Firebase认证状态标志
+    this.firebaseReady = false
+    this.firebaseInitPromise = null
   }
 
   // 获取默认用户数据
@@ -34,6 +37,102 @@ export class AuthStore {
         createdAt: '2025-02-01',
       },
     ]
+  }
+
+  // 🔥 修复：处理 Firebase 用户登录 - 正确的属性访问
+  addFirebaseUser(firebaseUser) {
+    try {
+      console.log('🔥 Processing Firebase user:', firebaseUser)
+
+      // 🔥 修复：正确访问Firebase用户属性
+      const appUser = {
+        id: firebaseUser.uid, // 使用 uid 而不是 id
+        name: firebaseUser.displayName || 'Google User', // 使用 displayName 而不是 name
+        email: firebaseUser.email,
+        photo: firebaseUser.photoURL, // 使用 photoURL 而不是 photo
+        role: 'user', // 默认角色
+        provider: 'google',
+        firebaseUid: firebaseUser.uid,
+        createdAt: new Date().toISOString().split('T')[0],
+        lastLogin: new Date().toISOString(),
+      }
+
+      console.log('🔥 Converted app user:', appUser)
+
+      // 检查是否已经存在此用户
+      let existingUser = this.users.find((u) => u.email === appUser.email)
+
+      if (existingUser) {
+        // 更新现有用户信息
+        existingUser.name = appUser.name
+        existingUser.photo = appUser.photo
+        existingUser.firebaseUid = appUser.firebaseUid
+        existingUser.provider = 'google'
+        existingUser.lastLogin = appUser.lastLogin
+
+        this.currentUser = existingUser
+        console.log('✅ Updated existing user:', existingUser)
+      } else {
+        // 创建新用户
+        appUser.id = Math.max(...this.users.map((u) => u.id), 0) + 1
+        this.users.push(appUser)
+        this.currentUser = appUser
+        console.log('✅ Created new user:', appUser)
+      }
+
+      this.updateLastActivity()
+
+      return {
+        success: true,
+        user: this.currentUser,
+        message: 'Google login successful',
+      }
+    } catch (error) {
+      console.error('❌ Error adding Firebase user:', error)
+      return {
+        success: false,
+        message: 'Failed to process Google login: ' + error.message,
+      }
+    }
+  }
+
+  // 🔥 新增：等待Firebase初始化完成
+  async waitForFirebaseReady() {
+    if (this.firebaseReady) {
+      return true
+    }
+
+    if (this.firebaseInitPromise) {
+      return await this.firebaseInitPromise
+    }
+
+    this.firebaseInitPromise = new Promise((resolve) => {
+      const checkReady = () => {
+        if (this.firebaseReady) {
+          resolve(true)
+        } else {
+          setTimeout(checkReady, 100)
+        }
+      }
+      checkReady()
+    })
+
+    return await this.firebaseInitPromise
+  }
+
+  // 🔥 新增：设置Firebase就绪状态
+  setFirebaseReady(ready = true) {
+    this.firebaseReady = ready
+    console.log('🔥 Firebase ready state set to:', ready)
+  }
+
+  // Firebase 用户登出
+  signOutFirebaseUser() {
+    if (this.currentUser && this.currentUser.provider === 'google') {
+      this.logout()
+      return { success: true, message: 'Google user signed out' }
+    }
+    return { success: false, message: 'No Google user to sign out' }
   }
 
   // 用户登录
@@ -94,11 +193,14 @@ export class AuthStore {
   // 用户登出
   logout() {
     this.currentUser = null
+    console.log('✅ User logged out from authStore')
   }
 
   // 检查用户是否已登录
   isLoggedIn() {
-    return this.currentUser !== null
+    const result = this.currentUser !== null
+    console.log('🔍 Auth check - isLoggedIn:', result, 'currentUser:', this.currentUser)
+    return result
   }
 
   // 检查用户是否有特定角色
@@ -119,6 +221,19 @@ export class AuthStore {
   // 获取当前用户信息
   getCurrentUser() {
     return this.currentUser
+  }
+
+  // 获取用户头像URL
+  getUserAvatar() {
+    if (this.currentUser && this.currentUser.photo) {
+      return this.currentUser.photo
+    }
+    return null
+  }
+
+  // 检查用户是否通过Google登录
+  isGoogleUser() {
+    return this.currentUser && this.currentUser.provider === 'google'
   }
 
   // 更新用户信息
@@ -291,6 +406,17 @@ export class AuthStore {
       return true
     }
     return false
+  }
+
+  // 调试方法 - 获取当前状态
+  getDebugInfo() {
+    return {
+      currentUser: this.currentUser,
+      isLoggedIn: this.isLoggedIn(),
+      userCount: this.users.length,
+      lastActivity: new Date(this.lastActivity).toISOString(),
+      firebaseReady: this.firebaseReady,
+    }
   }
 }
 

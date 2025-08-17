@@ -5,6 +5,20 @@
         <h2 class="login-title">Welcome Back</h2>
         <p class="login-subtitle">Sign in to access your account</p>
 
+        <!-- 外部认证选项 -->
+        <div class="external-auth">
+          <button @click="handleGoogleLogin" class="btn btn-google" :disabled="loading">
+            <span class="google-icon">🔒</span>
+            {{ loading ? 'Signing in...' : 'Continue with Google' }}
+          </button>
+        </div>
+
+        <!-- 分隔线 -->
+        <div class="divider">
+          <span>OR</span>
+        </div>
+
+        <!-- 传统登录表单 -->
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
             <label for="email" class="form-label">Email Address</label>
@@ -36,11 +50,16 @@
 
           <div v-if="loginError" class="error-message">{{ loginError }}</div>
 
-          <button type="submit" class="btn btn-primary login-btn" :disabled="!isFormValid">
+          <button
+            type="submit"
+            class="btn btn-primary login-btn"
+            :disabled="!isFormValid || loading"
+          >
             Sign In
           </button>
         </form>
 
+        <!-- 页面底部 -->
         <div class="login-footer">
           <p>
             Don't have an account?
@@ -64,6 +83,7 @@
 
 <script>
 import { authStore } from '../stores/auth.js'
+import { signInWithGoogle } from '../firebase/config.js'
 
 export default {
   name: 'LoginPage',
@@ -78,6 +98,7 @@ export default {
         password: '',
       },
       loginError: '',
+      loading: false,
     }
   },
   computed: {
@@ -85,7 +106,80 @@ export default {
       return this.form.email && this.form.password && !this.errors.email && !this.errors.password
     },
   },
+  mounted() {
+    console.log('🔐 LoginPage mounted')
+
+    // 检查是否已经登录
+    if (authStore.isLoggedIn()) {
+      console.log('✅ User already logged in, redirecting...')
+      this.redirectToDashboard()
+    }
+  },
   methods: {
+    // 🔥 Google登录处理 - 只使用弹窗
+    async handleGoogleLogin() {
+      this.loading = true
+      this.loginError = ''
+
+      try {
+        console.log('🚀 Starting Google popup login...')
+
+        const result = await signInWithGoogle()
+
+        if (result.success && result.user) {
+          console.log('✅ Google login successful:', result.user)
+
+          // 添加用户到AuthStore
+          const authResult = authStore.addFirebaseUser(result.user)
+          console.log('🔥 AuthStore result:', authResult)
+
+          if (authResult.success) {
+            // 触发全局登录事件
+            window.dispatchEvent(
+              new CustomEvent('user-login', {
+                detail: authResult.user,
+              }),
+            )
+
+            console.log('🎉 Login completed, redirecting...')
+
+            // 立即重定向
+            this.redirectToDashboard()
+          } else {
+            this.loginError = authResult.message
+          }
+        } else {
+          this.loginError = result.message || 'Google login failed'
+        }
+      } catch (error) {
+        console.error('❌ Google login error:', error)
+        this.loginError = 'Google login failed. Please try again.'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 重定向到dashboard
+    redirectToDashboard() {
+      const currentUser = authStore.getCurrentUser()
+      console.log('🔄 Redirecting user:', currentUser)
+
+      // 检查是否有保存的重定向路径
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin')
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin')
+        this.$router.push(redirectPath)
+      } else {
+        // 根据用户角色重定向
+        if (currentUser?.role === 'admin') {
+          this.$router.push('/admin')
+        } else {
+          this.$router.push('/dashboard')
+        }
+      }
+    },
+
+    // 表单验证方法
     validateEmail() {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!this.form.email) {
@@ -96,6 +190,7 @@ export default {
         this.errors.email = ''
       }
     },
+
     validatePassword() {
       if (!this.form.password) {
         this.errors.password = 'Password is required'
@@ -105,6 +200,8 @@ export default {
         this.errors.password = ''
       }
     },
+
+    // 传统登录处理
     handleLogin() {
       this.validateEmail()
       this.validatePassword()
@@ -113,27 +210,30 @@ export default {
         return
       }
 
-      // 使用 authStore 进行登录
-      const result = authStore.login(this.form.email, this.form.password)
+      this.loading = true
 
-      if (result.success) {
-        this.loginError = ''
+      try {
+        const result = authStore.login(this.form.email, this.form.password)
 
-        // 触发自定义事件通知其他组件
-        window.dispatchEvent(
-          new CustomEvent('user-login', {
-            detail: result.user,
-          }),
-        )
+        if (result.success) {
+          this.loginError = ''
 
-        // 根据角色跳转
-        if (result.user.role === 'admin') {
-          this.$router.push('/admin')
+          // 触发用户登录事件
+          window.dispatchEvent(
+            new CustomEvent('user-login', {
+              detail: result.user,
+            }),
+          )
+
+          this.redirectToDashboard()
         } else {
-          this.$router.push('/dashboard')
+          this.loginError = result.message
         }
-      } else {
-        this.loginError = result.message
+      } catch (error) {
+        console.error('❌ Login error:', error)
+        this.loginError = 'Login failed. Please try again.'
+      } finally {
+        this.loading = false
       }
     },
   },
@@ -173,6 +273,63 @@ export default {
   text-align: center;
   color: #666;
   margin-bottom: 30px;
+}
+
+.external-auth {
+  margin-bottom: 20px;
+}
+
+.btn-google {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #4285f4;
+  background: white;
+  color: #4285f4;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.btn-google:hover {
+  background: #4285f4;
+  color: white;
+}
+
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-icon {
+  font-size: 18px;
+}
+
+.divider {
+  text-align: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #ddd;
+}
+
+.divider span {
+  background: white;
+  padding: 0 15px;
+  color: #666;
+  font-size: 14px;
 }
 
 .login-form {
@@ -278,7 +435,6 @@ export default {
   color: #666;
 }
 
-/* 响应式设计 */
 @media (max-width: 480px) {
   .login-card {
     padding: 30px 20px;
