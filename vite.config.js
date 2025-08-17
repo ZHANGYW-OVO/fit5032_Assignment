@@ -3,29 +3,30 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
+
+  // 重要：base 路径设置（在根级别）
+  base: '/fit5032_Assignment/',
+
   server: {
     port: 5173,
-    host: '0.0.0.0', // 或者使用 true
-    strictPort: false, // 如果端口被占用，自动尝试下一个
-    // 修复 Firebase Auth COOP 问题
+    host: '0.0.0.0',
+    strictPort: false,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },
-    // 修复 WebSocket 连接问题
     hmr: {
       port: 5173,
       host: 'localhost',
       clientPort: 5173,
     },
-    // 处理代理和 CORS
     cors: true,
-    // 监听文件变化
     watch: {
-      usePolling: true, // 在某些系统上需要轮询
+      usePolling: true,
       interval: 1000,
     },
   },
+
   preview: {
     port: 4173,
     host: '0.0.0.0',
@@ -34,19 +35,21 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },
   },
+
   define: {
     global: 'globalThis',
   },
+
   resolve: {
     alias: {
       '@': '/src',
     },
   },
+
+  // 修正后的 build 配置
   build: {
-    build: {
-      outDir: 'dist', // 确认这个目录名
-    },
-    base: '/fit5032_Assignment/', // 添加这行！重要
+    outDir: 'dist', // 输出目录
+    assetsDir: 'assets', // 资源目录
     rollupOptions: {
       output: {
         manualChunks: {
@@ -57,6 +60,7 @@ export default defineConfig({
       },
     },
   },
+
   // 优化依赖
   optimizeDeps: {
     include: ['vue', 'vue-router', 'firebase/app', 'firebase/auth'],
