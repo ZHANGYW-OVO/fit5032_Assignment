@@ -8,15 +8,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # 添加环境配置
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     permissions:
       contents: read
       pages: write
       id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -37,6 +36,15 @@ jobs:
 
       - name: Build project
         run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: List build output (Debug)
+        run: |
+          echo "Build directory contents:"
+          ls -la dist/
+          echo "Total files in dist:"
+          find dist/ -type f | wc -l
 
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3

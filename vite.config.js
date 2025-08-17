@@ -43,6 +43,10 @@ export default defineConfig({
     },
   },
   build: {
+    build: {
+      outDir: 'dist', // 确认这个目录名
+    },
+    base: '/fit5032_Assignment/', // 添加这行！重要
     rollupOptions: {
       output: {
         manualChunks: {
