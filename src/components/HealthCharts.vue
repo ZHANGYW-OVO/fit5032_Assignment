@@ -147,8 +147,38 @@
 </template>
 
 <script>
-// 注意：在实际项目中需要安装 chart.js
-// import Chart from 'chart.js/auto'
+// 正确导入Chart.js - 包含所有必需的控制器
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineController,
+  BarController,
+  DoughnutController,
+} from 'chart.js'
+
+// 注册Chart.js组件 - 包含所有控制器
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineController,
+  BarController,
+  DoughnutController,
+)
 
 export default {
   name: 'HealthCharts',
@@ -157,7 +187,7 @@ export default {
       loading: false,
       selectedTimeRange: 30,
       weightTarget: 70,
-      charts: {},
+      charts: {}, // 存储图表实例
 
       // 健康指标概览
       healthMetrics: [
@@ -234,11 +264,11 @@ export default {
   },
   methods: {
     async initializeCharts() {
-      // 模拟图表初始化（在实际项目中会使用 Chart.js）
       try {
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // 等待DOM更新
+        await this.$nextTick()
 
-        // 创建模拟图表
+        // 创建所有图表
         this.createBloodPressureChart()
         this.createHeartRateChart()
         this.createWeightChart()
@@ -246,59 +276,293 @@ export default {
         this.createMedicationChart()
         this.createSleepChart()
 
-        console.log('Charts initialized successfully')
+        console.log('✅ Charts initialized successfully')
       } catch (error) {
-        console.error('Failed to initialize charts:', error)
+        console.error('❌ Failed to initialize charts:', error)
       }
     },
 
     createBloodPressureChart() {
-      // 模拟血压数据
+      const ctx = this.$refs.bloodPressureChart
+      if (!ctx) return
+
+      // 清理现有图表
+      if (this.charts.bloodPressure) {
+        this.charts.bloodPressure.destroy()
+      }
+
       const dates = this.generateDateLabels(this.selectedTimeRange)
       const systolicData = this.generateRandomData(120, 140, dates.length)
       const diastolicData = this.generateRandomData(75, 90, dates.length)
 
-      // 在实际项目中，这里会创建真正的 Chart.js 图表
-      console.log('Blood pressure chart created with data:', { dates, systolicData, diastolicData })
+      this.charts.bloodPressure = new ChartJS(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Systolic',
+              data: systolicData,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              tension: 0.4,
+            },
+            {
+              label: 'Diastolic',
+              data: diastolicData,
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              tension: 0.4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 60,
+              max: 160,
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      })
     },
 
     createHeartRateChart() {
+      const ctx = this.$refs.heartRateChart
+      if (!ctx) return
+
+      if (this.charts.heartRate) {
+        this.charts.heartRate.destroy()
+      }
+
       const dates = this.generateDateLabels(this.selectedTimeRange)
       const heartRateData = this.generateRandomData(65, 85, dates.length)
 
-      console.log('Heart rate chart created with data:', { dates, heartRateData })
+      this.charts.heartRate = new ChartJS(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Heart Rate (BPM)',
+              data: heartRateData,
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 50,
+              max: 100,
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      })
     },
 
     createWeightChart() {
+      const ctx = this.$refs.weightChart
+      if (!ctx) return
+
+      if (this.charts.weight) {
+        this.charts.weight.destroy()
+      }
+
       const dates = this.generateDateLabels(this.selectedTimeRange)
       const weightData = this.generateWeightData(dates.length)
 
-      console.log('Weight chart created with data:', { dates, weightData })
+      this.charts.weight = new ChartJS(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Weight (kg)',
+              data: weightData,
+              borderColor: '#27ae60',
+              backgroundColor: 'rgba(39, 174, 96, 0.1)',
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: Math.min(...weightData) - 2,
+              max: Math.max(...weightData) + 2,
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      })
     },
 
     createActivityChart() {
-      const activityData = {
-        labels: ['Walking', 'Exercise', 'Rest', 'Sleep'],
-        data: [35, 15, 30, 20], // 百分比
-        colors: ['#3498db', '#e74c3c', '#f39c12', '#9b59b6'],
+      const ctx = this.$refs.activityChart
+      if (!ctx) return
+
+      if (this.charts.activity) {
+        this.charts.activity.destroy()
       }
 
-      console.log('Activity chart created with data:', activityData)
+      this.charts.activity = new ChartJS(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Walking', 'Exercise', 'Rest', 'Sleep'],
+          datasets: [
+            {
+              data: [35, 15, 30, 20],
+              backgroundColor: ['#3498db', '#e74c3c', '#f39c12', '#9b59b6'],
+              borderWidth: 2,
+              borderColor: '#fff',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                usePointStyle: true,
+              },
+            },
+          },
+        },
+      })
     },
 
     createMedicationChart() {
-      const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
-      const adherenceData = [95, 88, 92, 97] // 依从性百分比
+      const ctx = this.$refs.medicationChart
+      if (!ctx) return
 
-      console.log('Medication chart created with data:', { weeks, adherenceData })
+      if (this.charts.medication) {
+        this.charts.medication.destroy()
+      }
+
+      const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
+      const adherenceData = [95, 88, 92, 97]
+
+      this.charts.medication = new ChartJS(ctx, {
+        type: 'bar',
+        data: {
+          labels: weeks,
+          datasets: [
+            {
+              label: 'Adherence %',
+              data: adherenceData,
+              backgroundColor: '#27ae60',
+              borderColor: '#1e8449',
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+            },
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+          },
+        },
+      })
     },
 
     createSleepChart() {
-      const dates = this.generateDateLabels(7) // 显示最近7天
+      const ctx = this.$refs.sleepChart
+      if (!ctx) return
+
+      if (this.charts.sleep) {
+        this.charts.sleep.destroy()
+      }
+
+      const dates = this.generateDateLabels(7)
       const sleepHours = this.generateRandomData(6, 9, 7)
       const sleepQuality = this.generateRandomData(6, 10, 7)
 
-      console.log('Sleep chart created with data:', { dates, sleepHours, sleepQuality })
+      this.charts.sleep = new ChartJS(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [
+            {
+              label: 'Sleep Hours',
+              data: sleepHours,
+              backgroundColor: 'rgba(155, 89, 182, 0.6)',
+              borderColor: '#9b59b6',
+              borderWidth: 1,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Quality (1-10)',
+              data: sleepQuality,
+              type: 'line',
+              borderColor: '#f39c12',
+              backgroundColor: 'rgba(243, 156, 18, 0.1)',
+              tension: 0.4,
+              yAxisID: 'y1',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              max: 12,
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              max: 10,
+              grid: {
+                drawOnChartArea: false,
+              },
+            },
+          },
+        },
+      })
     },
 
     generateDateLabels(days) {
@@ -316,7 +580,6 @@ export default {
     },
 
     generateWeightData(count) {
-      // 生成逐渐下降的体重数据
       const startWeight = 72
       const targetWeight = 68.5
       const data = []
@@ -324,7 +587,6 @@ export default {
       for (let i = 0; i < count; i++) {
         const progress = i / (count - 1)
         const weight = startWeight - (startWeight - targetWeight) * progress
-        // 添加一些随机波动
         const fluctuation = (Math.random() - 0.5) * 0.5
         data.push(Math.round((weight + fluctuation) * 10) / 10)
       }
@@ -336,12 +598,8 @@ export default {
       this.loading = true
 
       try {
-        // 模拟数据加载
         await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // 重新初始化图表
         await this.initializeCharts()
-
         console.log(`Charts updated for ${this.selectedTimeRange} days`)
       } catch (error) {
         console.error('Failed to update charts:', error)
@@ -354,13 +612,14 @@ export default {
       this.loading = true
 
       try {
-        // 模拟刷新健康指标
         await new Promise((resolve) => setTimeout(resolve, 800))
 
         this.healthMetrics.forEach((metric) => {
-          // 模拟数据变化
           metric.trend = (Math.random() - 0.5) * 10
         })
+
+        // 重新创建图表以反映新数据
+        await this.initializeCharts()
 
         console.log('Health data refreshed')
       } catch (error) {
@@ -371,7 +630,6 @@ export default {
     },
 
     async loadHealthData() {
-      // 模拟从服务器加载健康数据
       console.log('Loading health data...')
     },
 
@@ -386,7 +644,6 @@ export default {
     },
 
     exportHealthReport() {
-      // 集成导出服务
       const reportData = {
         patientName: 'Current User',
         date: new Date().toLocaleDateString(),
@@ -562,13 +819,7 @@ export default {
 
 .chart-wrapper {
   height: 250px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border-radius: 8px;
-  color: #666;
-  font-style: italic;
+  position: relative;
 }
 
 .chart-canvas {
