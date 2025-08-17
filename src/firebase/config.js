@@ -3,6 +3,21 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getFirestore } from 'firebase/firestore'
 
+// 在 firebase/config.js 的开头添加
+console.log('🔧 Firebase Config Debug:', {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ? '✅ Set' : '❌ Missing',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ? '✅ Set' : '❌ Missing',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ? '✅ Set' : '❌ Missing',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ? '✅ Set' : '❌ Missing',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ? '✅ Set' : '❌ Missing',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID ? '✅ Set' : '❌ Missing',
+})
+
+// 如果在开发环境中，打印第一个字符来验证
+if (import.meta.env.DEV) {
+  console.log('🔍 First char of API key:', import.meta.env.VITE_FIREBASE_API_KEY?.charAt(0))
+}
+
 // Firebase 配置
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
